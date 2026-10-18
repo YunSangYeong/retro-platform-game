@@ -23,6 +23,8 @@ export class Audio {
   }
   play(name) {
     const notes = {
+      appear: [220, 294, 370, 440],
+      power: [392, 523, 659, 784],
       jump: [330, 660],
       coin: [880, 1320],
       block: [170, 120],

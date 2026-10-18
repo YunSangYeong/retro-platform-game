@@ -5,12 +5,12 @@ import { Audio } from "./audio.js";
 const sound = new Audio(),
   touch = { left: false, right: false, jump: false, run: false };
 const palette = {
-  a: 0x26384a,
-  b: 0xd9e8bc,
-  c: 0xf4c880,
-  d: 0xe98160,
-  e: 0x428c78,
-  f: 0x82bc72,
+  a: 0x301810,
+  b: 0x2455b8,
+  c: 0xffc080,
+  d: 0xe05018,
+  e: 0xd86018,
+  f: 0xffd038,
   g: 0xffffff,
 };
 class Grove extends Phaser.Scene {
@@ -25,22 +25,33 @@ class Grove extends Phaser.Scene {
     this.remaining = 240;
     this.jumpHeld = false;
     this.invincible = 0;
+    this.powered = false;
     this.lastCheckpoint = 32;
     this.makeTextures();
-    this.cameras.main.setBackgroundColor("#8dcfce");
+    this.cameras.main.setBackgroundColor("#5c94fc");
     this.physics.world.setBounds(0, 0, WIDTH, 288);
     this.cameras.main.setBounds(0, 0, WIDTH, 240);
     const bg = this.add.graphics();
-    for (let x = 0; x < WIDTH; x += 150) {
-      bg.fillStyle(0x70b9a9);
-      bg.fillTriangle(x - 50, 208, x + 45, 110, x + 145, 208);
-      bg.fillStyle(0xb7d8b7);
-      bg.fillTriangle(x + 20, 208, x + 100, 145, x + 180, 208);
+    // Hard-edged silhouettes and a restricted console palette.
+    for (let x = 40; x < WIDTH; x += 240) {
+      bg.fillStyle(0x183800);
+      bg.fillTriangle(x - 34, 208, x + 24, 150, x + 82, 208);
+      bg.fillStyle(0x00a800);
+      bg.fillTriangle(x - 30, 208, x + 24, 154, x + 78, 208);
+      bg.fillStyle(0x183800);
+      bg.fillRect(x + 16, 176, 3, 8);
+      bg.fillRect(x + 35, 189, 3, 6);
     }
-    for (let x = 35; x < WIDTH; x += 130) {
-      bg.fillStyle(0xedf3d1);
-      bg.fillRoundedRect(x, 48 + (x % 3) * 12, 38, 12, 5);
-      bg.fillRoundedRect(x + 9, 41 + (x % 3) * 12, 17, 16, 5);
+    for (let x = 30; x < WIDTH; x += 148) {
+      const y = 48 + (Math.floor(x / 148) % 3) * 12;
+      bg.fillStyle(0x254898);
+      bg.fillRect(x - 2, y + 4, 44, 13);
+      bg.fillStyle(0xffffff);
+      bg.fillRect(x, y + 3, 40, 11);
+      bg.fillRect(x + 8, y - 3, 10, 6);
+      bg.fillRect(x + 18, y - 6, 12, 9);
+      bg.fillStyle(0xb8d8f8);
+      bg.fillRect(x + 4, y + 12, 31, 2);
     }
     bg.setScrollFactor(0.35, 1);
     this.solids = this.physics.add.staticGroup();
@@ -51,12 +62,14 @@ class Grove extends Phaser.Scene {
       }
     for (let x = 72; x < WIDTH; x += 192) {
       const g = this.add.graphics();
-      g.fillStyle(0x658d66);
-      g.fillRect(x, 181, 5, 27);
-      g.fillStyle(0x4d9e79);
-      g.fillCircle(x + 2, 175, 17);
-      g.fillStyle(0x83b96d);
-      g.fillCircle(x - 3, 169, 12);
+      g.fillStyle(0x183800);
+      g.fillRect(x - 18, 200, 52, 8);
+      g.fillRect(x - 10, 192, 36, 8);
+      g.fillRect(x, 188, 16, 4);
+      g.fillStyle(0x00a800);
+      g.fillRect(x - 16, 202, 48, 6);
+      g.fillRect(x - 8, 194, 32, 8);
+      g.fillRect(x + 2, 190, 12, 4);
     }
     blocks.forEach(([x, y], i) => {
       const b = this.solids
@@ -65,18 +78,19 @@ class Grove extends Phaser.Scene {
         .refreshBody();
       b.item = i % 3 === 1;
       b.used = false;
+      b.power = i % 6 === 1;
     });
     pipes.forEach(([x, h]) => {
       const g = this.add.graphics();
-      g.fillStyle(0x284f4e);
+      g.fillStyle(0x183800);
       g.fillRect(x, 208 - h, 28, h);
-      g.fillStyle(0x4f9a77);
+      g.fillStyle(0x00a800);
       g.fillRect(x + 3, 208 - h, 20, h);
-      g.fillStyle(0x9fca83);
+      g.fillStyle(0xb8f818);
       g.fillRect(x + 5, 208 - h, 4, h);
-      g.fillStyle(0x31665c);
+      g.fillStyle(0x005800);
       g.fillRect(x - 2, 208 - h, 32, 8);
-      g.fillStyle(0x9fca83);
+      g.fillStyle(0xb8f818);
       g.fillRect(x, 210 - h, 26, 2);
       this.solids
         .create(x, 208 - h, "blank")
@@ -90,6 +104,13 @@ class Grove extends Phaser.Scene {
       if (!isGap(x)) this.pickups.create(x, x % 128 === 48 ? 139 : 178, "coin");
     }
     blocks.forEach(([x, y]) => this.pickups.create(x + 8, y - 18, "coin"));
+    this.powerups = this.physics.add.group();
+    this.physics.add.collider(this.powerups, this.solids, (item) => {
+      if (item.body.blocked.left || item.body.blocked.right) {
+        item.direction *= -1;
+        item.setVelocityX(item.direction * 36);
+      }
+    });
     this.foes = this.physics.add.group({ allowGravity: true });
     enemies.forEach((x, i) => {
       let e = this.foes.create(x, 198, "foe");
@@ -110,6 +131,17 @@ class Grove extends Phaser.Scene {
           b.setTexture("used");
           this.getCoin();
           this.score += 100;
+          const coin = this.add.image(b.x + 8, b.y - 8, "coin").setDepth(5);
+          this.tweens.add({
+            targets: coin,
+            y: b.y - 40,
+            duration: 380,
+            yoyo: true,
+            onComplete: () => coin.destroy(),
+          });
+          this.floatText(b.x + 8, b.y - 20, "+150");
+          if (b.power) this.spawnPower(b);
+          this.tweens.add({ targets: b, y: b.y - 4, duration: 70, yoyo: true });
         }
         sound.play("block");
       }
@@ -123,6 +155,17 @@ class Grove extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.pickups, (p, c) => {
       c.destroy();
       this.getCoin();
+    });
+    this.physics.add.overlap(this.player, this.powerups, (p, item) => {
+      if (this.state !== "playing" || !item.ready) return;
+      item.destroy();
+      this.score += 1000;
+      this.powered = true;
+      p.setScale(1, 1.5);
+      p.y -= 4;
+      this.invincible = 900;
+      this.floatText(p.x, p.y - 24, "POWER UP!");
+      sound.play("power");
     });
     this.physics.add.overlap(this.player, this.foes, (p, e) => {
       if (this.state !== "playing") return;
@@ -248,43 +291,41 @@ class Grove extends Phaser.Scene {
       g.generateTexture(key, 16, 16);
       g.destroy();
     };
-    tile("ground", (g) => {
-      g.fillStyle(0x8c684e);
-      g.fillRect(0, 0, 16, 16);
-      g.fillStyle(0x4f8160);
-      g.fillRect(0, 0, 16, 5);
-      g.fillStyle(0xb4cc72);
-      g.fillRect(0, 0, 16, 2);
-      g.fillStyle(0xb58b5c);
-      g.fillRect(3, 9, 3, 2);
-      g.fillRect(12, 6, 2, 3);
-    });
-    tile("dirt", (g) => {
-      g.fillStyle(0x795d49);
-      g.fillRect(0, 0, 16, 16);
-      g.fillStyle(0x9d7751);
-      g.fillRect(4, 4, 3, 2);
-      g.fillRect(12, 11, 2, 2);
-    });
+    for (const key of ["ground", "dirt"])
+      tile(key, (g) => {
+        g.fillStyle(0xc84c0c);
+        g.fillRect(0, 0, 16, 16);
+        g.fillStyle(0x301810);
+        g.fillRect(0, 0, 16, 1);
+        g.fillRect(0, 0, 1, 16);
+        g.fillRect(0, 8, 16, 1);
+        g.fillRect(8, 0, 1, 8);
+        g.fillRect(4, 8, 1, 8);
+        g.fillStyle(0xfcbcb0);
+        g.fillRect(1, 1, 6, 1);
+        g.fillRect(10, 1, 5, 1);
+        g.fillRect(1, 9, 2, 1);
+        g.fillRect(5, 9, 10, 1);
+      });
     tile("brick", (g) => {
-      g.fillStyle(0xa4634d);
+      g.fillStyle(0xc84c0c);
       g.fillRect(0, 0, 16, 16);
-      g.lineStyle(1, 0x593e3b);
+      g.lineStyle(1, 0x301810);
       g.strokeRect(0, 0, 16, 16);
       g.lineBetween(0, 8, 16, 8);
       g.lineBetween(8, 0, 8, 8);
       g.lineBetween(4, 8, 4, 16);
-      g.fillStyle(0xd99566);
+      g.fillStyle(0xfcbcb0);
       g.fillRect(1, 1, 14, 2);
       g.fillRect(1, 9, 14, 1);
     });
     for (const key of ["item", "used"])
       tile(key, (g) => {
-        g.fillStyle(key === "item" ? 0xe8b85e : 0x8a7862);
+        g.fillStyle(key === "item" ? 0xfca044 : 0x886000);
         g.fillRect(0, 0, 16, 16);
-        g.lineStyle(1, 0x735039);
+        g.lineStyle(1, 0x301810);
         g.strokeRect(0, 0, 16, 16);
-        g.fillStyle(0xffe4a0);
+        g.fillStyle(0xffe8a0);
         if (key === "item") {
           g.fillRect(6, 3, 5, 2);
           g.fillRect(9, 5, 2, 3);
@@ -300,6 +341,24 @@ class Grove extends Phaser.Scene {
       g.fillStyle(0xfff1bf);
       g.fillRect(6, 4, 2, 6);
     });
+    sprite("power", [
+      "................",
+      "......ffff......",
+      "....fffffff.....",
+      "...ffgggggff....",
+      "..ffggfgfggff...",
+      "..fgggggggggf...",
+      "..ffffffffff....",
+      ".....cccc.......",
+      ".....caccc......",
+      ".....cccc.......",
+      "....cccccc......",
+      "....aaaaaa......",
+      "................",
+      "................",
+      "................",
+      "................",
+    ]);
     tile("blank", () => {});
   }
   showOverlay(title, sub, hint) {
@@ -359,13 +418,63 @@ class Grove extends Phaser.Scene {
       this.physics.resume();
     }
   }
+  floatText(x, y, label) {
+    const text = this.add
+      .text(x, y, label, {
+        fontFamily: "monospace",
+        fontSize: "8px",
+        color: "#ffffff",
+        stroke: "#301810",
+        strokeThickness: 2,
+      })
+      .setOrigin(0.5)
+      .setDepth(10);
+    this.tweens.add({
+      targets: text,
+      y: y - 22,
+      alpha: 0,
+      duration: 900,
+      onComplete: () => text.destroy(),
+    });
+  }
+  spawnPower(block) {
+    const item = this.powerups
+      .create(block.x + 8, block.y + 8, "power")
+      .setDepth(2);
+    item.body.enable = false;
+    item.ready = false;
+    item.direction = 1;
+    this.tweens.add({
+      targets: item,
+      y: block.y - 9,
+      duration: 450,
+      onComplete: () => {
+        if (!item.active) return;
+        item.body.enable = true;
+        item.body.reset(item.x, item.y);
+        item.ready = true;
+        item.setVelocityX(36);
+      },
+    });
+    sound.play("appear");
+  }
   getCoin() {
     this.coins++;
     this.score += 50;
     sound.play("coin");
   }
-  hurt() {
-    if (this.invincible > 0 || this.state !== "playing") return;
+  hurt(fall = false) {
+    if ((!fall && this.invincible > 0) || this.state !== "playing") return;
+    if (this.powered && !fall) {
+      this.powered = false;
+      this.player.setScale(1);
+      this.invincible = 1600;
+      sound.play("hurt");
+      this.floatText(this.player.x, this.player.y - 20, "POWER DOWN");
+      return;
+    }
+    this.powered = false;
+    this.player.setScale(1);
     this.lives--;
     sound.play("hurt");
     if (this.lives <= 0) {
@@ -449,8 +558,11 @@ class Grove extends Phaser.Scene {
     }
     if (p.y > 260 || this.remaining <= 0) {
       if (this.remaining <= 0) this.finish("over");
-      else this.hurt();
+      else this.hurt(true);
     }
+    this.powerups.children.iterate((item) => {
+      if (item?.active && item.y > 270) item.destroy();
+    });
     this.foes.children.iterate((e) => {
       if (!e?.active) return;
       if (Math.abs(e.x - e.home) > 28) {
@@ -498,7 +610,7 @@ const game = new Phaser.Game({
   height: 240,
   pixelArt: true,
   roundPixels: true,
-  backgroundColor: "#8dcfce",
+  backgroundColor: "#5c94fc",
   physics: { default: "arcade", arcade: { gravity: { y: 650 }, debug: false } },
   scale: { mode: Phaser.Scale.NONE },
   scene: Grove,
