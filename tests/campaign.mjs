@@ -67,7 +67,11 @@ try {
               jumping = false;
               air = false;
             }
-            if (jumping && [9].includes(next) && frames - jumpFrame > 6)
+            if (
+              jumping &&
+              (s.stageIndex === 1 ? [9] : []).includes(next) &&
+              frames - jumpFrame > 6
+            )
               s.keys.jump.isDown = false;
             s.keys.right.isDown = true;
             s.keys.run.isDown = true;
@@ -83,10 +87,16 @@ try {
               s.keys.right.isDown = false;
               release--;
             } else if (!jumping && ground) {
-              const points = [
-                168, 288, 480, 590, 704, 992, 1100, 1216, 1400, 1504, 1616,
-                1728, 1900, 2016, 2128, 2240, 2350,
-              ];
+              const points =
+                s.stageIndex === 1
+                  ? [
+                      168, 288, 480, 590, 704, 992, 1100, 1216, 1400, 1504,
+                      1616, 1728, 1900, 2016, 2128, 2240, 2350,
+                    ]
+                  : [
+                      168, 256, 420, 528, 640, 868, 1088, 1316, 1536, 1764,
+                      1984, 2212, 2432, 2600,
+                    ];
               let danger = next < points.length && p.x >= points[next];
               if (danger) {
                 next++;
@@ -125,10 +135,48 @@ try {
       .locator("canvas")
       .count()
       .then(() => p.evaluate(() => window.__gameScene.overlay.list[2].text)),
+    /WORLD 02 CLEAR/,
+  );
+  await p.evaluate(() => window.__gameScene.game.loop.wake());
+  const afterCave = await p.evaluate(() => ({
+    score: window.__gameScene.score,
+    coins: window.__gameScene.coins,
+    lives: window.__gameScene.lives,
+    powered: window.__gameScene.powered,
+  }));
+  await p.waitForTimeout(120);
+  await p.keyboard.press("Enter");
+  await p.waitForFunction(
+    () =>
+      window.__gameScene.stageIndex === 2 &&
+      window.__gameScene.state === "title",
+  );
+  assert.deepEqual(
+    await p.evaluate(() => ({
+      score: window.__gameScene.score,
+      coins: window.__gameScene.coins,
+      lives: window.__gameScene.lives,
+      powered: window.__gameScene.powered,
+    })),
+    afterCave,
+  );
+  assert.equal(await p.evaluate(() => window.__gameScene.remaining), 280);
+  assert.equal(
+    await p.evaluate(() => window.__gameScene.overlay.list[2].text),
+    "WORLD 03",
+  );
+  await p.waitForTimeout(120);
+  await p.keyboard.press("Enter");
+  const third = await drive();
+  console.log("Stage 3:", third);
+  assert.equal(third.state, "clear");
+  assert.match(
+    await p.evaluate(() => window.__gameScene.overlay.list[2].text),
     /ALL CLEAR/,
   );
   await p.evaluate(() => window.__gameScene.game.loop.wake());
-  await p.screenshot({ path: "/tmp/moonleaf-stage2-clear.png" });
+  await p.screenshot({ path: "/tmp/moonleaf-stage3-clear.png" });
+
   await p.waitForTimeout(120);
   await p.keyboard.press("Enter");
   await p.waitForFunction(
@@ -151,8 +199,40 @@ try {
   const small = await drive();
   console.log("Small player:", small);
   assert.equal(small.state, "clear");
+  await p.evaluate(() => {
+    window.__gameScene.game.loop.wake();
+    window.__gameScene.lives = 3;
+    window.__gameScene.scene.restart({ stageIndex: 2 });
+  });
+  await p.waitForFunction(
+    () =>
+      window.__gameScene.stageIndex === 2 &&
+      window.__gameScene.state === "title",
+  );
+  await p.waitForTimeout(120);
+  await p.keyboard.press("Enter");
+  const thirdSmall = await drive();
+  console.log("Stage 3 small:", thirdSmall);
+  assert.equal(thirdSmall.state, "clear");
+  await p.evaluate(() => {
+    const s = window.__gameScene;
+    s.game.loop.wake();
+    s.lives = 3;
+    s.scene.restart({ stageIndex: 2, powered: true });
+  });
+  await p.waitForFunction(
+    () =>
+      window.__gameScene.stageIndex === 2 &&
+      window.__gameScene.state === "title" &&
+      window.__gameScene.powered,
+  );
+  await p.waitForTimeout(120);
+  await p.keyboard.press("Enter");
+  const thirdBig = await drive();
+  console.log("Stage 3 grown:", thirdBig);
+  assert.equal(thirdBig.state, "clear");
   console.log(
-    "PASS: stage transition, progress and growth carry, stage 2 clear in both forms, campaign restart",
+    "PASS: three-stage progression, carried progress, stage 2 and 3 clear, final restart",
   );
 } finally {
   await b.close();

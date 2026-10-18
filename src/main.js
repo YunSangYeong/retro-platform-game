@@ -30,6 +30,7 @@ class Grove extends Phaser.Scene {
     const { width: WIDTH, blocks, pipes, enemies } = this.level;
     const isGap = (x) => this.level.gaps.some(([a, b]) => x >= a && x < b);
     const cave = this.stageIndex === 1;
+    const citadel = this.stageIndex === 2;
     document.querySelector("#game").style.background = this.level.sky;
     const goalX = WIDTH - 106;
     document.querySelector(".cabinet-top span").innerHTML =
@@ -45,7 +46,25 @@ class Grove extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, WIDTH, 288);
     this.cameras.main.setBounds(0, 0, WIDTH, 240);
     const bg = this.add.graphics();
-    if (!cave) {
+    if (citadel) {
+      bg.fillStyle(0xffd890);
+      bg.fillRect(146, 52, 28, 24);
+      bg.fillRect(142, 58, 36, 12);
+      for (let x = 0; x < WIDTH; x += 144) {
+        const top = 108 + (x % 3) * 12;
+        bg.fillStyle(0x603850);
+        bg.fillRect(x, top, 64, 208 - top);
+        bg.fillRect(x - 4, top - 12, 16, 16);
+        bg.fillRect(x + 24, top - 12, 16, 16);
+        bg.fillRect(x + 52, top - 12, 16, 16);
+        bg.fillStyle(0x301c38);
+        bg.fillRect(x + 12, top + 20, 8, 16);
+        bg.fillRect(x + 44, top + 20, 8, 16);
+        bg.fillStyle(0x885068);
+        bg.fillRect(x + 4, top + 4, 4, 204 - top);
+      }
+      bg.setScrollFactor(0.4, 1);
+    } else if (!cave) {
       // Hard-edged silhouettes and a restricted console palette.
       for (let x = 40; x < WIDTH; x += 240) {
         bg.fillStyle(0x183800);
@@ -89,12 +108,14 @@ class Grove extends Phaser.Scene {
     for (let x = 0; x < WIDTH; x += 16)
       if (!isGap(x)) {
         this.solids
-          .create(x, 208, cave ? "stone" : "ground")
+          .create(x, 208, citadel ? "castle" : cave ? "stone" : "ground")
           .setOrigin(0)
           .refreshBody();
-        this.add.image(x, 224, cave ? "stone" : "dirt").setOrigin(0);
+        this.add
+          .image(x, 224, citadel ? "castle" : cave ? "stone" : "dirt")
+          .setOrigin(0);
       }
-    for (let x = 72; !cave && x < WIDTH; x += 192) {
+    for (let x = 72; !cave && !citadel && x < WIDTH; x += 192) {
       const g = this.add.graphics();
       g.fillStyle(0x183800);
       g.fillRect(x - 18, 200, 52, 8);
@@ -256,7 +277,7 @@ class Grove extends Phaser.Scene {
     this.physics.pause();
     if (this.continueRun) {
       this.showOverlay(
-        "WORLD 02",
+        `WORLD 0${this.stageIndex + 1}`,
         this.level.title,
         "Z / SPACE / ENTER / TAP TO START",
       );
@@ -415,6 +436,20 @@ class Grove extends Phaser.Scene {
       g.fillRect(9, 1, 6, 1);
       g.fillRect(5, 9, 10, 1);
     });
+    tile("castle", (g) => {
+      g.fillStyle(0x906878);
+      g.fillRect(0, 0, 16, 16);
+      g.fillStyle(0x382838);
+      g.fillRect(0, 0, 16, 1);
+      g.fillRect(0, 8, 16, 1);
+      g.fillRect(0, 0, 1, 16);
+      g.fillRect(8, 0, 1, 8);
+      g.fillRect(4, 8, 1, 8);
+      g.fillStyle(0xe0b0a0);
+      g.fillRect(1, 1, 6, 2);
+      g.fillRect(9, 1, 6, 1);
+      g.fillRect(5, 9, 10, 1);
+    });
     tile("blank", () => {});
   }
   showOverlay(title, sub, hint) {
@@ -554,19 +589,20 @@ class Grove extends Phaser.Scene {
       this.score += Math.floor(this.remaining) * 10;
       sound.play("clear");
     }
+    const next = stages[this.stageIndex + 1];
     this.showOverlay(
       state === "clear"
-        ? this.stageIndex === 0
-          ? "GROVE CLEAR!"
+        ? next
+          ? `WORLD 0${this.stageIndex + 1} CLEAR!`
           : "ALL CLEAR!"
         : "GAME OVER",
       state === "clear"
-        ? this.stageIndex === 0
-          ? "다음 모험: 별빛 동굴"
-          : "두 번의 모험을 모두 완주했어요!"
+        ? next
+          ? `다음 모험: ${next.title}`
+          : "세 번의 모험을 모두 완주했어요!"
         : "다시, 한 걸음부터",
-      state === "clear" && this.stageIndex === 0
-        ? "ENTER / TAP : WORLD 02"
+      state === "clear" && next
+        ? `ENTER / TAP : WORLD 0${this.stageIndex + 2}`
         : "ENTER / TAP TO RESTART",
     );
     this.updateHUD();
