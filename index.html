@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#101d2b" />
+    <title>Moonleaf Run · 달잎 탐험</title>
+  </head>
+  <body>
+    <main>
+      <header>
+        <a class="brand" href="./">✦ MOONLEAF <span>ARCADE CLUB / 001</span></a
+        ><button id="mute" aria-label="음소거">SOUND ON</button>
+      </header>
+      <section class="intro">
+        <p class="eyebrow">A LITTLE ADVENTURE, A BIG LEAP.</p>
+        <h1>달잎 탐험<span>MOONLEAF RUN</span></h1>
+        <p>별빛을 모으고, 초록 언덕 너머로.</p>
+      </section>
+      <section class="cabinet">
+        <div class="cabinet-top">
+          <span><i></i> WORLD 01 — SUNLIT GROVE</span
+          ><button id="pause">Ⅱ PAUSE</button>
+        </div>
+        <div id="game" aria-label="달잎 탐험 게임 화면"></div>
+        <div class="cabinet-bottom">
+          <span>✦ ORIGINAL PIXEL ADVENTURE</span
+          ><span>256 × 240 / 60 FPS TARGET</span>
+        </div>
+      </section>
+      <div class="touch" aria-label="모바일 게임 조작">
+        <div>
+          <button data-key="left" aria-label="왼쪽">◀</button
+          ><button data-key="right" aria-label="오른쪽">▶</button>
+        </div>
+        <div>
+          <button data-key="run">RUN</button
+          ><button data-key="jump">JUMP</button>
+        </div>
+      </div>
+      <footer>
+        <span>← → 이동 <b>Z / SPACE</b> 점프 <b>X / SHIFT</b> 달리기</span
+        ><span><b>P</b> 일시정지 <b>M</b> 음소거 · 화면을 눌러 시작</span>
+      </footer>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
